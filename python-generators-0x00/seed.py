@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import mysql.connector
-import time
 import uuid
 import csv
 
@@ -100,19 +99,3 @@ def insert_data(connection, filename):
         if 'cursor' in locals():
             cursor.close()
 
-# Implements Generator to stream rows one by one
-def stream_rows():
-    connection = connect_to_prodev()
-    if not connection:
-        return
-    try:
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM user_data")
-        for row in cursor:
-            yield row
-            time.sleep(0.1)
-    except mysql.connector.Error as err:
-        print(f"Error streaming rows: {err}")
-    finally:
-        cursor.close()
-        connection.close()
