@@ -2,6 +2,8 @@
 
 import mysql.connector
 import time
+import uuid
+import csv
 
 # Configures the database
 db_config = {
@@ -61,14 +63,26 @@ def create_table(connection):
         cursor.close()
 
 # inserts data into user_data table if it doesn't exist
-def insert_data(connection, data):
+def insert_data(connection, filename):
     try:
+        # Load data from CSV file
+        with open(filename, "r") as file:
+            csv_reader = csv.reader(file)
+            next(csv_reader) 
+            # Load data as a list of tuples (name, email, age)
+            data = [(row[0], row[1], float(row[2])) for row in csv_reader]
+            if not data:
+                print("No data to insert from CSV.")
+                return
+
         cursor = connection.cursor()
         for row in data:
-            # unpack the row
-            user_id, name, email, age = row
-            cursor.execute(
-                "SELECT COUNT(*) FROM user_data WHERE user_id = %s", (user_id,))
+            # Unpack the row (name, email, age)
+            name, email, age = row
+            # Generate a UUID for user_id
+            user_id = str(uuid.uuid4())
+            # Check if user_id already exists (precautionary)
+            cursor.execute("SELECT COUNT(*) FROM user_data WHERE user_id = %s", (user_id,))
             if cursor.fetchone()[0] == 0:
                 cursor.execute("""
                     INSERT INTO user_data (user_id, name, email, age)
@@ -76,10 +90,15 @@ def insert_data(connection, data):
                 """, (user_id, name, email, age))
         connection.commit()
         print("Data inserted successfully.")
+    except FileNotFoundError:
+        print(f"Error: {filename} not found.")
     except mysql.connector.Error as err:
         print(f"Error inserting data: {err}")
+    except Exception as e:
+        print(f"Error reading CSV: {e}")
     finally:
-        cursor.close()
+        if 'cursor' in locals():
+            cursor.close()
 
 # Implements Generator to stream rows one by one
 def stream_rows():
