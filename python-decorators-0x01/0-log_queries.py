@@ -15,7 +15,7 @@ logging.basicConfig(
 def log_queries(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        # Get the query from the arguments (first positional argument in this case)
+        # Get the query from the arguments 
         query = args[0] if args else kwargs.get('query', 'Unknown query')
         # Log the query
         logging.info(f"Executing SQL query: {query}")
