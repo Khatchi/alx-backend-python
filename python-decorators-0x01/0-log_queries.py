@@ -24,6 +24,34 @@ def log_queries(func):
         return result
     return wrapper
 
+# Set up the users table if it doesn't exist
+def setup_users_table():
+    """Set up the users table in users.db if it doesn't exist."""
+    try:
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cursor.execute("SELECT COUNT(*) FROM users")
+        if cursor.fetchone()[0] == 0:
+            cursor.executemany('INSERT INTO users (name, email) VALUES (?, ?)', [
+                ('solomon', 'solomon@gmail.com'),
+                ('kachi', 'kachi@gmail.com'),
+                ('dikachim', 'dikachim@gmail.com'),
+            ])
+        conn.commit()
+        logging.info("Users table created and populated with sample data (if not already present).")
+    except sqlite3.Error as e:
+        logging.error(f"Error setting up users table: {e}")
+    finally:
+        conn.close()
+
 @log_queries
 def fetch_all_users(query):
     conn = sqlite3.connect('users.db')
@@ -36,6 +64,8 @@ def fetch_all_users(query):
 
 
 if __name__ == "__main__":
+    
+    setup_users_table()
     try:
         users = fetch_all_users(query="SELECT * FROM users")
         print("Fetched users:", users)
