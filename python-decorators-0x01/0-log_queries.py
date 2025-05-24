@@ -2,6 +2,7 @@ import sqlite3
 import functools
 import logging
 import sys
+from datetime import datetime
 
 # Configure logging to output to stdout
 logging.basicConfig(
