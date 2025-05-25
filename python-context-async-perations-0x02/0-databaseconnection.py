@@ -47,17 +47,18 @@ def setup_users_table(db_name):
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
+                age int NOT NULL,
                 email TEXT UNIQUE NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         cursor.execute("SELECT COUNT(*) FROM users")
         if cursor.fetchone()[0] == 0:
-            cursor.executemany('INSERT INTO users (name, email) VALUES (?, ?)', [
-                ('solomon', 'solomon@gmail.com'),
-                ('mmesoma', 'mmesoma@gmail.com'),
-                ('kachi', 'kachi@gmail.com'),
-                ('oluchi', 'oluchi@gmail.com'),
+            cursor.executemany('INSERT INTO users (name, age, email) VALUES (?, ?, ?)', [
+                ('solomon', 26, 'solomon@gmail.com'),
+                ('mmesoma', 23, 'mmesoma@gmail.com'),
+                ('kachi', 16, 'kachi@gmail.com'),
+                ('oluchi', 24, 'oluchi@gmail.com'),
             ])
         conn.commit()
         logging.info("Users table created and populated with sample data (if not already present).")
