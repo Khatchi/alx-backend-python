@@ -10,6 +10,7 @@ class User(AbstractUser):
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
     email = models.EmailField(unique=True)
+    password = models.CharField(max_length=128)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -29,20 +30,22 @@ class User(AbstractUser):
 
 class Conversation(models.Model):
     """Model representing a conversation between users."""
+    conversation_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     participants = models.ManyToManyField(User, related_name='conversations')
     title = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         """Return a string representation of the conversation."""
-        return self.title if self.title else f"Conversation {self.id}"
+        return self.title if self.title else f"Conversation {self.conversation_id}"
 
     class Meta:
         """Meta options for the Conversation model."""
         ordering = ['-created_at']
 
 class Message(models.Model):
-    """Model representing a message in a conversation."""
+    """Model representing a message in a conversation.""" 
+    message_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     conversation = models.ForeignKey(Conversation, related_name='messages', on_delete=models.CASCADE)
     sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
     message_body = models.TextField()
