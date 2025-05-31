@@ -39,6 +39,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # My apps
     'rest_framework',
+    'rest_framework.permissions.IsAuthenticated',
+    'DEFAULT_AUTHENTICATION_CLASSES',
+    'rest_framework.authentication.SessionAuthentication',
     'chats',
 ]
 
