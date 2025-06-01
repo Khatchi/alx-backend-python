@@ -9,11 +9,11 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['user_id', 'username', 'email', 'first_name', 'last_name', 'phone_number']
         read_only_fields = ['user_id', 'created_at', 'updated_at']
 
-
 class MessageSerializer(serializers.ModelSerializer):
     """Serializer for the Message model."""
     sender = UserSerializer(read_only=True)
     conversation = serializers.PrimaryKeyRelatedField(queryset=Conversation.objects.all())
+    message_body = serializers.CharField() 
 
     class Meta:
         """Meta options for the MessageSerializer."""
@@ -21,7 +21,7 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = ['message_id', 'conversation', 'sender', 'message_body', 'sent_at']
         read_only_fields = ['message_id', 'sender', 'sent_at']
 
-    def create_message(self, validated_data):
+    def create(self, validated_data):
         """
         Custom create method to set the sender to the authenticated user.
         """
@@ -40,12 +40,20 @@ class ConversationSerializer(serializers.ModelSerializer):
         write_only=True,
         required=True
     )
+    title = serializers.CharField(max_length=100, allow_blank=True, required=False)
+    participant_count = serializers.SerializerMethodField()
 
     class Meta:
         """Meta options for the ConversationSerializer."""
         model = Conversation
-        fields = ['conversation_id', 'title', 'participants', 'participant_ids', 'messages', 'created_at']
+        fields = ['conversation_id', 'title', 'participants', 'participant_ids', 'messages', 'created_at', 'participant_count']
         read_only_fields = ['conversation_id', 'participants', 'messages', 'created_at']
+
+    def get_participant_count(self, obj):
+        """
+        Return the number of participants in the conversation.
+        """
+        return obj.participants.count()
 
     def validate_participant_ids(self, value):
         """
@@ -72,7 +80,7 @@ class ConversationSerializer(serializers.ModelSerializer):
 
         return conversation
 
-    def update_title_participant(self, validated_data):
+    def update_title_participants(self, validated_data):
         """
         Custom update method to handle updating title and participants.
         """
