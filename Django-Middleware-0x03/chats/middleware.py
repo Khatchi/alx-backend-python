@@ -55,6 +55,31 @@ class OffensiveLanguageMiddleware:
     Middleware to limit the number of messages sent per IP address to 5 per minute.
     """
     def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.method == 'POST' and request.path == '/api/chats/messages/':
+            ip_address = request.META.get('REMOTE_ADDR', 'unknown')
+            current_time = timezone.now()
+            with message_counts_lock:
+                message_counts[ip_address] = [
+                    timestamp for timestamp in message_counts[ip_address]
+                    if current_time - timestamp <= timedelta(minutes=1)
+                ]
+                if len(message_counts[ip_address]) >= 5:
+                    return HttpResponse(
+                        "Rate limit exceeded: Maximum 5 messages per minute allowed.",
+                        status=429
+                    )
+                message_counts[ip_address].append(current_time)
+        response = self.get_response(request)
+        return response
+
+class RolePermissionMiddleware:
+    """
+    Middleware to restrict DELETE actions on /api/chats/ to admin or moderator roles.
+    """
+    def __init__(self, get_response):
         """
         Initialize the middleware with the get_response callable.
         """
@@ -62,30 +87,15 @@ class OffensiveLanguageMiddleware:
 
     def __call__(self, request):
         """
-        Track POST requests to /api/chats/messages/ and enforce a limit of 5 messages per minute per IP.
+        Check if the user has admin or moderator role for DELETE requests to /api/chats/.
         """
-        if request.method == 'POST' and request.path == '/api/chats/messages/':
-            # Get client IP address
-            ip_address = request.META.get('REMOTE_ADDR', 'unknown')
-            current_time = timezone.now()
-
-            with message_counts_lock:
-                # Remove messages older than 1 minute
-                message_counts[ip_address] = [
-                    timestamp for timestamp in message_counts[ip_address]
-                    if current_time - timestamp <= timedelta(minutes=1)
-                ]
-
-                # Check message count
-                if len(message_counts[ip_address]) >= 5:
-                    return HttpResponse(
-                        "Rate limit exceeded: Maximum 5 messages per minute allowed.",
-                        status=429  # Too Many Requests
-                    )
-
-                # Record the new message timestamp
-                message_counts[ip_address].append(current_time)
-
-        # Proceed with the request
+        if request.method == 'DELETE' and request.path.startswith('/api/chats/'):
+            if not request.user.is_authenticated:
+                return HttpResponseForbidden("Authentication required.")
+            # Check if user is admin (is_staff) or in Moderator group
+            if not (request.user.is_staff or request.user.groups.filter(name='Moderator').exists()):
+                return HttpResponseForbidden(
+                    "Only admins or moderators can perform this action."
+                )
         response = self.get_response(request)
         return response
