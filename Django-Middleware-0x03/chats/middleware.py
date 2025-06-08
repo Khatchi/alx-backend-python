@@ -75,7 +75,7 @@ class OffensiveLanguageMiddleware:
         response = self.get_response(request)
         return response
 
-class RolePermissionMiddleware:
+class RolepermissionMiddleware:
     """
     Middleware to restrict DELETE actions on /api/chats/ to admin or moderator roles.
     """
