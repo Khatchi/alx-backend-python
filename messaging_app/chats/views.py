@@ -42,7 +42,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticated, IsParticipantOfConversation]
     filter_backends = [DjangoFilterBackend]
-    filterset_class = MessageFilter 
+    filterset_class = MessageFilter
     pagination_class = MessagePagination
 
     def get_queryset(self):
