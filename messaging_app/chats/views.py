@@ -4,14 +4,14 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer
-from .permissions import IsConversationParticipant
+from .permissions import IsParticipantOfConversation
 
 class ConversationViewSet(viewsets.ModelViewSet):
     """
     ViewSet for listing, retrieving, and creating conversations.
     """
     serializer_class = ConversationSerializer
-    permission_classes = [IsAuthenticated, IsConversationParticipant]
+    permission_classes = [IsAuthenticated, IsParticipantOfConversation]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = {
         'title': ['icontains'],
@@ -38,7 +38,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     ViewSet for listing, retrieving, and creating messages.
     """
     serializer_class = MessageSerializer
-    permission_classes = [IsAuthenticated, IsConversationParticipant]
+    permission_classes = [IsAuthenticated, IsParticipantOfConversation]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = {
         'conversation__conversation_id': ['exact'],
@@ -66,4 +66,9 @@ class MessageViewSet(viewsets.ModelViewSet):
                 {"detail": "You are not a participant in this conversation."},
                 status=status.HTTP_403_FORBIDDEN
             )
-        serializer.save(sender=self.request.user)
+        serializer.save(sender=self.request.user) 
+
+
+
+
+
