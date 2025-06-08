@@ -1,3 +1,25 @@
 venv/
 users.db
 .vscode
+
+# Python/Django
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.env
+
+# Django specific
+*.pot
+*.pyc
+migrations/
+*.sqlite3
+
+# IDEs
+.idea/
+.vscode/
+
+ye.py
