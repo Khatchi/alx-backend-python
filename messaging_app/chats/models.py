@@ -28,6 +28,8 @@ class User(AbstractUser):
             models.Index(fields=['email'], name='idx_user_email'),
         ]
 
+
+
 class Conversation(models.Model):
     """Model representing a conversation between users."""
     conversation_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

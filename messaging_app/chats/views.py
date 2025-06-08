@@ -4,13 +4,14 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer
+from .permissions import IsConversationParticipant
 
 class ConversationViewSet(viewsets.ModelViewSet):
     """
     ViewSet for listing, retrieving, and creating conversations.
     """
     serializer_class = ConversationSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsConversationParticipant]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = {
         'title': ['icontains'],
@@ -28,7 +29,6 @@ class ConversationViewSet(viewsets.ModelViewSet):
         Ensure the authenticated user is added to the participants when creating a conversation.
         """
         serializer.save()
-        
         participant_ids = serializer.validated_data.get('participant_ids', [])
         if self.request.user.user_id not in participant_ids:
             serializer.instance.participants.add(self.request.user)
@@ -38,7 +38,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     ViewSet for listing, retrieving, and creating messages.
     """
     serializer_class = MessageSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsConversationParticipant]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = {
         'conversation__conversation_id': ['exact'],
@@ -57,14 +57,13 @@ class MessageViewSet(viewsets.ModelViewSet):
         """
         Create a new message, ensuring it belongs to a valid conversation.
         """
-        conversation_id = serializer.validated_data['conversation'].conversation_id
-       
+        conversation = serializer.validated_data['conversation']
         if not Conversation.objects.filter(
-            conversation_id=conversation_id,
+            conversation_id=conversation.conversation_id,
             participants=self.request.user
         ).exists():
             return Response(
                 {"detail": "You are not a participant in this conversation."},
                 status=status.HTTP_403_FORBIDDEN
             )
-        serializer.save()
+        serializer.save(sender=self.request.user)
