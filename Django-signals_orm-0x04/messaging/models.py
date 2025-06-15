@@ -1,62 +1,46 @@
-import uuid
 from django.db import models
-from django.contrib.auth.models import AbstractUser
-
-# Create your models here.
-
-class User(AbstractUser):
-    """Custom user model that extends Django's AbstractUser."""
-    user_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    first_name = models.CharField(max_length=150, blank=True)
-    last_name = models.CharField(max_length=150, blank=True)
-    email = models.EmailField(unique=True)
-    password = models.CharField(max_length=128)
-    phone_number = models.CharField(max_length=15, blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        """Return a string representation of the user."""
-        return f"User: {self.username} (ID: {self.user_id})"\
-        if self.username else "User: Anonymous"
-
-    class Meta:
-        """Meta options for the User model."""
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['username'], name='idx_user_username'),
-            models.Index(fields=['email'], name='idx_user_email'),
-        ]
+from django.contrib.auth.models import User
 
 
+class UnreadMessagesManager(models.Manager):
+    def for_user(self, user):
+        return self.filter(receiver=user, read=False).only('id', 'sender', 'content', 'timestamp')
 
-class Conversation(models.Model):
-    """Model representing a conversation between users."""
-    conversation_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    participants = models.ManyToManyField(User, related_name='conversations')
-    title = models.CharField(max_length=100, blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        """Return a string representation of the conversation."""
-        return self.title if self.title else f"Conversation {self.conversation_id}"
-
-    class Meta:
-        """Meta options for the Conversation model."""
-        ordering = ['-created_at']
 
 class Message(models.Model):
-    """Model representing a message in a conversation.""" 
-    message_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    conversation = models.ForeignKey(Conversation, related_name='messages', on_delete=models.CASCADE)
     sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
-    message_body = models.TextField()
-    sent_at = models.DateTimeField(auto_now_add=True)
+    receiver = models.ForeignKey(User, related_name='received_messages', on_delete=models.CASCADE)
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    edited = models.BooleanField(default=False)
+    edited_by = models.ForeignKey(User, null=True, blank=True, related_name='edited_messages', on_delete=models.SET_NULL)
+    parent_message = models.ForeignKey('self', null=True, blank=True, related_name='replies', on_delete=models.CASCADE)
+    read = models.BooleanField(default=False) 
+
+    objects = models.Manager() 
+    unread_messages = UnreadMessagesManager()
 
     def __str__(self):
-        """Return a string representation of the message."""
-        return f"Message from {self.sender} in {self.conversation}"
+        reply_note = " (Reply)" if self.parent_message else ""
+        return f"From {self.sender.username} to {self.receiver.username}{reply_note}"
 
-    class Meta:
-        """Meta options for the Message model."""
-        ordering = ['sent_at']
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    message = models.ForeignKey(Message, on_delete=models.CASCADE)
+    content = models.CharField(max_length=255)
+    is_read = models.BooleanField(default=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Notification for {self.user.username} - Read: {self.is_read}"
+
+
+class MessageHistory(models.Model):
+    message = models.ForeignKey(Message, related_name='history', on_delete=models.CASCADE)
+    old_content = models.TextField()
+    edited_at = models.DateTimeField(auto_now_add=True)
+    edited_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+
+    def __str__(self):
+        return f"Edit of message ID {self.message.id} at {self.edited_at}"
