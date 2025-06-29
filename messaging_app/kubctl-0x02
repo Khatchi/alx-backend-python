@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# kubctl-0x02: Deploy blue and green versions, check logs for green
+
+set -e
+
+echo "Applying Blue Deployment..."
+kubectl apply -f blue_deployment.yaml
+
+echo "Applying Green Deployment..."
+kubectl apply -f green_deployment.yaml
+
+echo "Updating Service to point to Green..."
+kubectl apply -f kubeservice.yaml
+
+echo "Waiting for green pods to be ready..."
+sleep 10
+
+echo "Listing Green Pods..."
+kubectl get pods -l version=green
+
+echo "Checking logs for Green Deployment..."
+for pod in $(kubectl get pods -l version=green -o jsonpath="{.items[*].metadata.name}"); do
+    echo "Logs from $pod"
+    kubectl logs $pod
+done
+
+echo "Zero-downtime Blue-Green Deployment completed."
