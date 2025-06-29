@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# kubctl-0x01: Scale Django app, verify pods, perform load testing, and monitor resource usage
+
+set -e
+
+APP_NAME="django-messaging-app"
+SERVICE_PORT=8000
+
+echo "Scaling the Django deployment to 3 replicas..."
+kubectl scale deployment $APP_NAME --replicas=3
+
+echo "Waiting for pods to be ready..."
+sleep 10
+
+echo "Listing current pods..."
+kubectl get pods -l app=django-messaging
+
+echo "Checking Service details..."
+SERVICE_IP=$(minikube service django-messaging-service --url | head -n1)
+echo "Service is reachable at: $SERVICE_IP"
+
+echo "Performing load testing using wrk..."
+if ! command -v wrk &> /dev/null; then
+    echo "wrk is not installed. Please install it from https://github.com/wg/wrk"
+    exit 1
+fi
+
+# Run a quick load test: 10 seconds, 2 threads, 10 connections
+wrk -t2 -c10 -d10s "$SERVICE_IP"
+
+echo "Monitoring resource usage..."
+if ! kubectl top pods &> /dev/null; then
+    echo "Metrics server may not be installed. You can install it with:"
+    echo "kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml"
+else
+    kubectl top pods
+fi
+
+echo "Scaling and monitoring complete!"
