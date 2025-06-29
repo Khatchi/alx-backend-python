@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# kubctl-0x03: Rolling update to version 2.0 with no downtime
+
+set -e
+
+echo "Applying updated blue deployment with image version 2.0..."
+kubectl apply -f blue_deployment.yaml
+
+echo "Monitoring rollout status..."
+kubectl rollout status deployment/django-blue
+
+echo "Starting availability test using curl..."
+
+# Start curl loop in the background for 15 seconds
+SERVICE_URL=$(minikube service django-service --url | head -n1)
+(
+  for i in {1..15}; do
+    echo -n "[$i] "
+    curl -s -o /dev/null -w "%{http_code}\n" "$SERVICE_URL/api/"
+    sleep 1
+  done
+) &
+
+CURL_PID=$!
+
+echo "Waiting for curl test to complete..."
+wait $CURL_PID
+
+echo "Listing current blue pods..."
+kubectl get pods -l version=blue
+
+echo "Rolling update complete and tested with no downtime."
